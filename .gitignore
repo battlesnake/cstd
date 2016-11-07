@@ -1,0 +1,4 @@
+c_modules/
+.*.swp
+.*.swo
+*.o
