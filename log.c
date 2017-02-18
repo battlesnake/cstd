@@ -2,12 +2,15 @@
 (
 set -euo pipefail
 declare -r out="$(mktemp)"
-gcc -g -DTEST_log -DSIMPLE_LOGGING_THREADSAFE -DSIMPLE_LOGGING_DEBUG -std=c11 -o "$out" "$0"
 trap "rm -f '$out'" EXIT ERR
+gcc -g -DTEST_log -DSIMPLE_LOGGING_THREADSAFE -DSIMPLE_LOGGING_DEBUG -std=c11 -o "$out" "$0"
+valgrind --leak-check=full --track-origins=yes --quiet "$out"
+gcc -g -DTEST_log -DSIMPLE_LOGGING_DEBUG -std=c11 -o "$out" "$0"
 valgrind --leak-check=full --track-origins=yes --quiet "$out"
 )
 exit 0
 #endif
+#include "std.h"
 #include "log.h"
 
 #define LOCATION "\x1b[0m[\x1b[94m%s\x1b[0m@\x1b[36m%s\x1b[0m:\x1b[35m%d\x1b[0m]  "

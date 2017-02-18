@@ -1,5 +1,4 @@
 #pragma once
-#include "std.h"
 
 extern const char *prog_name;
 extern int prog_name_trim;

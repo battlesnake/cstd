@@ -75,3 +75,7 @@
 #include <ratio>
 
 #include <locale>
+
+#if defined SIMPLE_LOGGING
+#include "log.h"
+#endif
