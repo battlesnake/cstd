@@ -20,6 +20,8 @@
 #define PI2 (2*M_PI)
 #define LN2 (M_LN2)
 
+#include "functional.h"
+
 #if defined SIMPLE_LOGGING
 #include "log.h"
 #endif
