@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <complex.h>
+#if defined __cplusplus
+#undef I
+#endif
 #include <memory.h>
 
 #include <errno.h>
