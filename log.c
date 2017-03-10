@@ -3,9 +3,9 @@
 set -euo pipefail
 declare -r out="$(mktemp)"
 trap "rm -f '$out'" EXIT ERR
-gcc -g -DTEST_log -DSIMPLE_LOGGING_THREADSAFE -DSIMPLE_LOGGING_DEBUG -std=c11 -o "$out" "$0"
+gcc -Wall -Wextra -Werror -g -DTEST_log -D_GNU_SOURCE -DSIMPLE_LOGGING_THREADSAFE -DSIMPLE_LOGGING_DEBUG -std=gnu11 -o "$out" "$0"
 valgrind --leak-check=full --track-origins=yes --quiet "$out"
-gcc -g -DTEST_log -DSIMPLE_LOGGING_DEBUG -std=c11 -o "$out" "$0"
+gcc -Wall -Wextra -Werror -g -DTEST_log -DSIMPLE_LOGGING_DEBUG -std=gnu11 -o "$out" "$0"
 valgrind --leak-check=full --track-origins=yes --quiet "$out"
 )
 exit 0
@@ -17,6 +17,8 @@ exit 0
 
 const char *prog_name = NULL;
 int prog_name_trim = -5;
+
+static enum log_level log_level = LOG_LEVEL_INITIAL;
 
 #if defined SIMPLE_LOGGING_THREADSAFE
 #include <pthread.h>
@@ -42,7 +44,42 @@ static void unlock()
 #define unlock()
 #endif
 
-static void _log(const char *template, const char *file, int line, const char *func, const char *format, va_list args)
+enum log_level log_level_set(enum log_level mask)
+{
+	lock();
+	enum log_level prev = log_level;
+	log_level = mask;
+	unlock();
+	return prev;
+}
+
+enum log_level log_level_include(enum log_level mask)
+{
+	lock();
+	enum log_level prev = log_level;
+	log_level |= mask;
+	unlock();
+	return prev;
+}
+
+enum log_level log_level_exclude(enum log_level mask)
+{
+	lock();
+	enum log_level prev = log_level;
+	log_level &= ~mask;
+	unlock();
+	return prev;
+}
+
+enum log_level log_level_get()
+{
+	lock();
+	enum log_level result = log_level;
+	unlock();
+	return result;
+}
+
+static void _log(enum log_level level, const char *template, const char *file, int line, const char *func, const char *format, va_list args)
 {
 	va_list args2;
 	va_copy(args2, args);
@@ -91,7 +128,9 @@ static void _log(const char *template, const char *file, int line, const char *f
 	p += sprintf(p, "\n");
 
 	lock();
-	fprintf(stderr, "%s", buf);
+	if (log_level & level) {
+		fprintf(stderr, "%s", buf);
+	}
 	unlock();
 }
 
@@ -99,7 +138,7 @@ void _log_info(const char *file, int line, const char *func, const char *format,
 {
 	va_list ap;
 	va_start(ap, format);
-	_log("%s", file, line, func, format, ap);
+	_log(ll_only_info, "%s", file, line, func, format, ap);
 	va_end(ap);
 }
 
@@ -107,7 +146,7 @@ void _log_warn(const char *file, int line, const char *func, const char *format,
 {
 	va_list ap;
 	va_start(ap, format);
-	_log("\x1b[1;33m%s\x1b[0m", file, line, func, format, ap);
+	_log(ll_only_warn, "\x1b[1;33m%s\x1b[0m", file, line, func, format, ap);
 	va_end(ap);
 }
 
@@ -115,7 +154,7 @@ void _log_error(const char *file, int line, const char *func, const char *format
 {
 	va_list ap;
 	va_start(ap, format);
-	_log("\x1b[1;31m%s\x1b[0m", file, line, func, format, ap);
+	_log(ll_only_error, "\x1b[1;31m%s\x1b[0m", file, line, func, format, ap);
 	va_end(ap);
 }
 
@@ -124,14 +163,33 @@ void _log_debug(const char *file, int line, const char *func, const char *format
 {
 	va_list ap;
 	va_start(ap, format);
-	_log("\x1b[2;4m%s\x1b[0m", file, line, func, format, ap);
+	_log(ll_only_debug, "\x1b[2;4m%s\x1b[0m", file, line, func, format, ap);
 	va_end(ap);
 }
 #endif
 
+void _log_sysfail(const char *file, int line, const char *func, const char *syscall, const char *format, ...)
+{
+	char fmtbuf[100];
+#if (_POSIX_C_SOURCE >= 200112L) && !  _GNU_SOURCE
+	const char *errstr = strerror(errno);
+#else
+	char errbuf[100];
+	const char *errstr = strerror_r(errno, errbuf, sizeof(errbuf));
+#endif
+	/* BUG: syscall & strerror(errno) may not contain % char - not enforced */
+	snprintf(fmtbuf, sizeof(fmtbuf), "%s(%s) failed with errno=%d (%s)", syscall, format, errno, errstr);
+	va_list ap;
+	va_start(ap, format);
+	_log(ll_only_sysfail, "\x1b[1;2;31m%s\x1b[0m", file, line, func, fmtbuf, ap);
+	va_end(ap);
+}
+
 #if defined TEST_log
 int main(int argc, char *argv[])
 {
+	(void) argc;
+	(void) argv;
 	log_info("This is some %s.", "information");
 	log_warn("This is a %s.", "warning");
 	log_error("This is an %s.", "error");
