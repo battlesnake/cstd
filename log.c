@@ -10,6 +10,7 @@ valgrind --leak-check=full --track-origins=yes --quiet "$out"
 )
 exit 0
 #endif
+#if ( defined SIMPLE_LOGGING || defined SIMPLE_LOGGING_DEBUG || SIMPLE_LOGGING_IMPL )
 #include "std.h"
 #include "log.h"
 
@@ -196,4 +197,6 @@ int main(int argc, char *argv[])
 	log_debug("This is a %s.", "debug message");
 	log_sysfail("exit", "%d", 0);
 }
+#endif
+
 #endif

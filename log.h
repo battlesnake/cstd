@@ -1,5 +1,7 @@
 #pragma once
 
+#if ( defined SIMPLE_LOGGING || defined SIMPLE_LOGGING_DEBUG || SIMPLE_LOGGING_IMPL || SIMPLE_LOGGING_INTF )
+
 extern const char *prog_name;
 extern int prog_name_trim;
 
@@ -43,4 +45,6 @@ extern void _log_debug(const char *file, int line, const char *func, const char 
 #define log_debug(format, ...) _log_debug(__FILE__, __LINE__, __func__, format, ##__VA_ARGS__);
 #else
 #define log_debug(format, ...) do { } while (0)
+#endif
+
 #endif
