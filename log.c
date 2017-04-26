@@ -171,7 +171,7 @@ void _log_debug(const char *file, int line, const char *func, const char *format
 void _log_sysfail(const char *file, int line, const char *func, const char *syscall, const char *format, ...)
 {
 	char fmtbuf[100];
-#if (_POSIX_C_SOURCE >= 200112L) && !  _GNU_SOURCE
+#if (_POSIX_C_SOURCE >= 200112L) && ! defined _GNU_SOURCE
 	const char *errstr = strerror(errno);
 #else
 	char errbuf[100];
