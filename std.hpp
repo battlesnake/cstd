@@ -19,6 +19,7 @@
 #include <cstdlib>
 
 #include <numeric>
+#include <limits>
 #include <typeinfo>
 #include <type_traits>
 
